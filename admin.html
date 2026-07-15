@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽签管理后台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .session-info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .session-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .session-info-row:last-child {
+            margin-bottom: 0;
+        }
+        .session-code {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            user-select: all;
+        }
+        .btn-copy {
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-copy:hover {
+            background: #5568d3;
+        }
+        .share-link {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-danger {
+            background: #ef5350;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .results-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .results-count {
+            font-size: 14px;
+            color: #666;
+        }
+        .participant-list {
+            list-style: none;
+        }
+        .participant {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .participant-number {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+        .participant-name {
+            flex: 1;
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        .participant-time {
+            font-size: 12px;
+            color: #999;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .copied {
+            display: none;
+            color: #4caf50;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .copied.show {
+            display: inline;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .last-update {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 抽签管理后台</h1>
+        <p class="subtitle">实时查看抽签结果</p>
+
+        <div class="session-info">
+            <div class="session-info-row">
+                <span>会话码:</span>
+                <div>
+                    <span class="session-code" id="sessionCode">加载中...</span>
+                    <button class="btn-copy" onclick="copySessionCode()">复制</button>
+                    <span class="copied" id="copied">✓ 已复制</span>
+                </div>
+            </div>
+            <div class="session-info-row">
+                <span>抽签链接:</span>
+            </div>
+            <div class="share-link" id="shareLink">加载中...</div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="refreshData()">
+                <span class="status-indicator"></span>实时同步
+            </button>
+            <button class="btn btn-danger" onclick="resetSession()">♻️ 重置抽签</button>
+        </div>
+
+        <div class="results">
+            <div class="results-header">
+                <span class="results-title">抽签结果</span>
+                <span class="results-count" id="resultsCount">0/10 人</span>
+            </div>
+            <ul class="participant-list" id="participantList">
+                <li class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div>暂无抽签记录</div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="last-update" id="lastUpdate">最后更新: --</div>
+
+        <div class="back-link">
+            <a href="#" id="backLink" onclick="goBack(event)">← 返回抽签页面</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.protocol + '//' + window.location.host + '/api';
+        let sessionId = null;
+        let autoRefreshInterval = null;
+
+        function getSessionId() {
+            const params = new URLSearchParams(window.location.search);
+            const session = params.get('session');
+            if (session) return session;
+            window.location.href = 'index.html';
+            return null;
+        }
+
+        function copySessionCode() {
+            const code = document.getElementById('sessionCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const copied = document.getElementById('copied');
+                copied.classList.add('show');
+                setTimeout(() => copied.classList.remove('show'), 2000);
+            });
+        }
+
+        function copyShareLink() {
+            const link = document.getElementById('shareLink').textContent;
+            navigator.clipboard.writeText(link);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderParticipants(participants) {
+            const listEl = document.getElementById('participantList');
+            const countEl = document.getElementById('resultsCount');
+
+            if (!participants || participants.length === 0) {
+                listEl.innerHTML = `
+                    <li class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div>暂无抽签记录</div>
+                    </li>
+                `;
+                countEl.textContent = '0/10 人';
+                return;
+            }
+
+            // 已按 number 排序
+            listEl.innerHTML = participants.map(p => `
+                <li class="participant">
+                    <div class="participant-number">${p.number}</div>
+                    <div class="participant-name">${escapeHtml(p.name)}</div>
+                    <div class="participant-time">${formatTime(p.created_at)}</div>
+                </li>
+            `).join('');
+
+            countEl.textContent = `${participants.length}/10 人`;
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch(`${API_BASE}/participants?session=${sessionId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderParticipants(data.participants);
+
+                    // 更新最后更新时间
+                    const now = new Date();
+                    document.getElementById('lastUpdate').textContent =
+                        `最后更新: ${now.toLocaleTimeString('zh-CN')}`;
+                }
+            } catch (error) {
+                console.error('刷新数据失败:', error);
+            }
+        }
+
+        async function resetSession() {
+            if (!confirm('确定要重置抽签吗？这将清空所有抽签记录！')) {
+                return;
+            }
+
+            if (!confirm('再次确认：重置后所有人都需要重新抽签，确定要继续吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/reset`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('抽签已重置！');
+                    refreshData();
+                }
+            } catch (error) {
+                console.error('重置失败:', error);
+                alert('重置失败，请重试');
+            }
+        }
+
+        function goBack(e) {
+            e.preventDefault();
+            window.location.href = 'index.html?session=' + sessionId;
+        }
+
+        function init() {
+            sessionId = getSessionId();
+            if (!sessionId) return;
+
+            document.getElementById('sessionCode').textContent = sessionId;
+            document.getElementById('backLink').href = 'index.html?session=' + sessionId;
+
+            // 构建分享链接
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const path = window.location.pathname.replace('admin.html', 'index.html');
+            const shareUrl = `${protocol}//${host}${path}?session=${sessionId}`;
+            document.getElementById('shareLink').textContent = shareUrl;
+
+            // 初始加载
+            refreshData();
+
+            // 每 5 秒自动刷新
+            autoRefreshInterval = setInterval(refreshData, 5000);
+        }
+
+        // 页面卸载时清除定时器
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

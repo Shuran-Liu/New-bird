@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汇报顺序抽签</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 20px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .session-info {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .session-info span {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-draw {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-draw:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-draw:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            margin-top: 10px;
+        }
+        .result {
+            display: none;
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+        }
+        .result.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .result-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .result-number {
+            font-size: 72px;
+            font-weight: bold;
+            color: #667eea;
+            line-height: 1;
+        }
+        .result-text {
+            font-size: 18px;
+            color: #333;
+            margin-top: 10px;
+        }
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .status.remaining {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .status.completed {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        .admin-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+        .admin-link a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        .success.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 汇报顺序抽签</h1>
+        <p class="subtitle">10人汇报顺序随机抽签</p>
+
+        <div class="session-info">
+            抽签会话码: <span id="sessionId">加载中...</span>
+        </div>
+
+        <div class="error" id="errorMsg"></div>
+        <div class="success" id="successMsg"></div>
+
+        <div id="mainContent" style="display: none;">
+            <div class="input-group">
+                <label for="userName">请输入你的姓名:</label>
+                <input type="text" id="userName" placeholder="输入姓名" maxlength="20" autocomplete="off">
+            </div>
+
+            <button class="btn btn-draw" id="drawBtn" onclick="draw()">🎲 抽取我的顺序</button>
+
+            <div class="status" id="status"></div>
+
+            <div class="result" id="result">
+                <div class="result-label">你的汇报顺序是</div>
+                <div class="result-number" id="resultNumber"></div>
+                <div class="result-text" id="resultText"></div>
+            </div>
+
+            <div class="admin-link">
+                <a href="#" id="adminLink" onclick="openAdmin(event)">📊 管理员后台</a>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">正在连接抽签服务器...</div>
+    </div>
+
+    <script>
+        // API 基础地址（自动检测）
+        const API_BASE = window.location.protocol + '//' + window.location.host + '/api';
+
+        // 从 URL 获取会话 ID，如果没有则创建新的
+        let sessionId = null;
+        let sessionData = null;
+
+        function getSessionId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('session');
+        }
+
+        function createNewSession() {
+            return fetch(`${API_BASE}/session`)
+                .then(res => res.json())
+                .then(data => {
+                    sessionId = data.session_id;
+                    // 更新 URL
+                    const newUrl = window.location.pathname + '?session=' + sessionId;
+                    window.history.replaceState({}, '', newUrl);
+                    return data;
+                });
+        }
+
+        function loadSession() {
+            sessionId = getSessionId();
+
+            if (!sessionId) {
+                return createNewSession();
+            }
+
+            return fetch(`${API_BASE}/session?session=${sessionId}`)
+                .then(res => {
+                    if (!res.ok) {
+                        // 会话不存在，创建新的
+                        return createNewSession();
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    sessionData = data;
+                    sessionId = data.session_id;
+                    document.getElementById('sessionId').textContent = sessionId;
+
+                    // 更新 URL（确保会话 ID 正确）
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.get('session') !== sessionId) {
+                        const newUrl = window.location.pathname + '?session=' + sessionId;
+                        window.history.replaceState({}, '', newUrl);
+                    }
+
+                    return data;
+                })
+                .catch(error => {
+                    console.error('加载会话失败:', error);
+                    throw error;
+                });
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = message;
+            errorMsg.classList.add('show');
+            setTimeout(() => errorMsg.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMsg');
+            successMsg.textContent = message;
+            successMsg.classList.add('show');
+            setTimeout(() => successMsg.classList.remove('show'), 3000);
+        }
+
+        function draw() {
+            const nameInput = document.getElementById('userName');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                showError('请输入姓名！');
+                return;
+            }
+
+            // 禁用按钮防止重复点击
+            const btn = document.getElementById('drawBtn');
+            btn.disabled = true;
+            btn.textContent = '🎲 抽签中...';
+
+            fetch(`${API_BASE}/draw`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    name: name
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = '🎲 抽取我的顺序';
+
+                if (data.error) {
+                    if (data.error === 'already_drawn') {
+                        showError(data.message);
+                    } else {
+                        showError(data.error || '抽签失败，请重试');
+                    }
+                    return;
+                }
+
+                // 显示结果
+                showResult(data.number);
+                showSuccess('抽签成功！');
+                nameInput.value = '';
+
+                // 刷新会话状态
+                loadSession().then(() => updateStatus());
+            })
+            .catch(error => {
+                console.error('抽签失败:', error);
+                btn.disabled = false;
+                btn.textContent = '🎲 抽取我的顺序';
+                showError('网络错误，请检查连接后重试');
+            });
+        }
+
+        function showResult(number) {
+            const resultDiv = document.getElementById('result');
+            const resultNumber = document.getElementById('resultNumber');
+            const resultText = document.getElementById('resultText');
+
+            resultNumber.textContent = `第 ${number} 位`;
+
+            const texts = [
+                '运气不错！',
+                '祝汇报顺利！',
+                '加油！',
+                'Good luck!',
+                '准备充分吧！',
+                '相信自己！',
+                '你可以的！',
+                '祝你好运！'
+            ];
+            resultText.textContent = texts[Math.floor(Math.random() * texts.length)];
+
+            resultDiv.classList.add('show');
+        }
+
+        function updateStatus() {
+            const statusDiv = document.getElementById('status');
+
+            if (!sessionData) return;
+
+            const remaining = sessionData.available_numbers ? sessionData.available_numbers.length : 0;
+            const drawn = sessionData.participants ? sessionData.participants.length : 0;
+
+            if (remaining > 0) {
+                statusDiv.className = 'status remaining';
+                statusDiv.textContent = `📊 还剩 ${remaining} 个位置待抽取 | 已抽取 ${drawn} 人`;
+            } else {
+                statusDiv.className = 'status completed';
+                statusDiv.textContent = '🎉 所有人都已完成抽签！';
+            }
+        }
+
+        function openAdmin(e) {
+            e.preventDefault();
+            window.location.href = 'admin.html?session=' + sessionId;
+        }
+
+        function init() {
+            loadSession()
+                .then(() => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    updateStatus();
+                })
+                .catch(error => {
+                    document.getElementById('loading').textContent = '连接服务器失败，请刷新页面重试';
+                    showError('无法连接到抽签服务器，请确保服务器正在运行');
+                });
+        }
+
+        // 监听回车键
+        document.getElementById('userName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                draw();
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
